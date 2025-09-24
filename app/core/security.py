@@ -3,11 +3,12 @@ from datetime import timedelta, datetime, timezone
 from jwt.exceptions import InvalidTokenError
 from fastapi import Depends, HTTPException
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from typing import Annotated
+from pydantic import ValidationError
 
 from app.core.database import get_db_session
 from app.core.config import Settings, get_settings
@@ -15,7 +16,10 @@ from app.models.user import User
 from app.schemas.token import TokenData
 from app.schemas.user import UserInDb
 
-oauth_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+oauth_scheme = OAuth2PasswordBearer(
+                        tokenUrl="/token",
+                        scopes={"me": "read info about current user", "items": "read items"},
+                        )
 pwd_cntx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 CREDENTIAL_EXCEPTION = HTTPException(status_code=401, detail="not a valid user", headers={"WWW-Authenticate": "Bearer"})
@@ -45,7 +49,6 @@ async def authenticate_user(username: str, password: str, db_session: AsyncSessi
     user_db = user_db.scalar_one_or_none()
     if user_db is None:
         raise CREDENTIAL_EXCEPTION
-    # user_in_db = UserInDb(**user_db)
     user_in_db = UserInDb.model_validate(user_db)
     
     if not check_plain_password(password, user_in_db.password):
@@ -63,18 +66,42 @@ async def get_user_from_db(db_session: AsyncSession, username: str):
 
 
 async def get_current_user(
+            security_scopes: SecurityScopes,
             token: Annotated[str, Depends(oauth_scheme)],
             db_session: Annotated[AsyncSession, Depends(get_db_session)],
             settings: Annotated[Settings, Depends(get_settings)]) -> UserInDb:
+    
+    if security_scopes.scopes:
+        authenticate_value = f"Bearer scope={security_scopes.scope_str}"
+    else:
+        authenticate_value = "Bearer"
+    CREDENTIAL_EXCEPTION = HTTPException(
+        status_code=401,
+        detail="invalid user credentials",
+        headers={"WWW-Authenticate": authenticate_value},
+    )
+
     try:
-        payload = jwt.decode(token, settings.secrete_key, algorithms=settings.algorithm)
+        payload = jwt.decode(token, settings.secrete_key, algorithms=[settings.algorithm])
         username = payload.get("sub")
         if username is None:
             raise CREDENTIAL_EXCEPTION
-        token_data = TokenData(username=username)
-    except InvalidTokenError:
+        scope: str = payload.get("scope", "")
+        token_scopes = scope.split(" ")
+        token_data = TokenData(username=username, scopes=token_scopes)
+    except (InvalidTokenError, ValidationError):
         raise CREDENTIAL_EXCEPTION
+    
     user_in_db = await get_user_from_db(db_session=db_session, username=token_data.username)
+    
+    for scope in security_scopes.scopes:
+        if scope not in token_data.scopes:
+            # raise CREDENTIAL_EXCEPTION
+            raise HTTPException(
+                status_code=401,
+                detail="Not enough permissions",
+                headers={"WWW-Authenticate": authenticate_value},
+            )
     return user_in_db
     
     

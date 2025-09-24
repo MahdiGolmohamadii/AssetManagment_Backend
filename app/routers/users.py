@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body, HTTPException
+from fastapi import APIRouter, Depends, Body, HTTPException, Security
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -35,4 +35,13 @@ async def create_new_account(
     
 @router.get("/users/me")
 async def get_my_user(user: Annotated[UserInDb, Depends(get_current_user)]):
+    return user
+
+
+@router.get("/users/withitems")
+async def scopes_test_me(user: Annotated[User, Security(get_current_user, scopes=["items"])]):
+    return user
+
+@router.get("/users/withme")
+async def scopes_test_items(user: Annotated[User, Security(get_current_user, scopes=["me"])]):
     return user

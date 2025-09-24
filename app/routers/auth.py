@@ -19,5 +19,6 @@ async def get_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     
     user_in_db = await security.authenticate_user(form_data.username, form_data.password, db_session)
     access_token_expires = timedelta(minutes=settings.access_key_expire_minutes)
-    access_token = security.create_access_token(settings, data={"sub": user_in_db.username}, expires_delta=access_token_expires)
+    #TODO change the "scope":"".join(form_data.scopes) get from db and what user actually has
+    access_token = security.create_access_token(settings, data={"sub": user_in_db.username, "scope":" ".join(form_data.scopes)}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
