@@ -10,6 +10,7 @@ from sqlalchemy.future import select
 from typing import Annotated
 from pydantic import ValidationError
 
+import app.core.utils as util
 from app.core.database import get_db_session
 from app.core.config import Settings, get_settings
 from app.models.user import User
@@ -43,6 +44,21 @@ def create_access_token(settings: Settings, data: dict, expires_delta: timedelta
     to_be_encoded.update({"exp": expires})
     encoded_jwt = jwt.encode(to_be_encoded, settings.secrete_key, algorithm=settings.algorithm)
     return encoded_jwt
+
+
+# def one_or_more_scopes(required_scopes: list[str], user:User) -> bool:
+#     user_avaiable_scopes = util.get_scopes(user.roles)
+    
+#     return any(scope in user_avaiable_scopes for scope in required_scopes)
+
+def one_or_more_scopes(required_scopes: list[str]):
+    async def _one_or_more_scopes(user: Annotated[UserInDb, Depends(get_current_user)]):
+        user_avaiable_scopes = util.get_scopes(user.roles)
+        if not any(scope in user_avaiable_scopes for scope in required_scopes):
+            raise HTTPException(status_code=401, detail="you are not enough")
+        return user
+    return _one_or_more_scopes
+        
 
 async def authenticate_user(username: str, password: str, db_session: AsyncSession):
     user_db = await db_session.execute(select(User).where(User.username == username))
@@ -87,8 +103,12 @@ async def get_current_user(
         if username is None:
             raise CREDENTIAL_EXCEPTION
         scope: str = payload.get("scope", "")
-        token_scopes = scope.split(" ")
-        token_data = TokenData(username=username, scopes=token_scopes)
+        role: str = payload.get("role", "")
+        print(role)
+        token_scopes = util.get_scopes(role)
+        print(token_scopes)
+        token_scope_list = token_scopes.split(" ")
+        token_data = TokenData(username=username, scopes=token_scope_list)
     except (InvalidTokenError, ValidationError):
         raise CREDENTIAL_EXCEPTION
     

@@ -6,6 +6,7 @@ class UserInput(BaseModel):
 
 class UserInDb(UserInput):
     id: int
+    roles: str
 
     class Config:
         from_attributes = True

@@ -3,11 +3,14 @@ from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
+
+from app.core import utils
 from app.schemas.user import UserInput, UserInDb
 from app.models.user import User
 from app.core import security
 from app.core.database import get_db_session
-from app.core.security import get_current_user
+from app.core.security import get_current_user, one_or_more_scopes
+from app.repositories import user as userRepo
 
 
 router = APIRouter(tags=["Users"])
@@ -19,7 +22,7 @@ async def create_new_account(
             user_input: Annotated[UserInput, Body()]):
     
     hashed_pass = security.hash_plain_password(user_input.password)
-    new_user = User(username = user_input.username, password=hashed_pass)
+    new_user = User(username = user_input.username, password=hashed_pass, roles = "guest")
     
     try:
         db_session.add(new_user)
@@ -38,10 +41,25 @@ async def get_my_user(user: Annotated[UserInDb, Depends(get_current_user)]):
     return user
 
 
-@router.get("/users/withitems")
-async def scopes_test_me(user: Annotated[User, Security(get_current_user, scopes=["items"])]):
+@router.get("/user/me")
+async def scopes_artist_test(user: Annotated[User, Security(get_current_user, scopes=["projects:read"])]):
     return user
 
-@router.get("/users/withme")
-async def scopes_test_items(user: Annotated[User, Security(get_current_user, scopes=["me"])]):
-    return user
+@router.get("/user/{user_id}")
+async def get_user(
+            user_id:int, 
+            user: Annotated[UserInDb, Depends(one_or_more_scopes(["user:*", "user:me"]))], 
+            db_session: Annotated[AsyncSession, Depends(get_db_session)]):
+    
+    user_scopes = utils.get_scopes(user.roles)
+    user_scopes_list = user_scopes.split(" ")
+    user_in_db = await userRepo.get_user_by_id(user_id, db_session)
+    if user_in_db is None:
+        raise HTTPException(status_code=401, detail="user not found")
+    if "user:*" in user_scopes_list:
+        return user_in_db
+    elif "user:me" in user_scopes_list and user.id == user_id:
+        return user_in_db
+    raise HTTPException(status_code=401, detail="you do not have access to user you wanted")
+
+    
