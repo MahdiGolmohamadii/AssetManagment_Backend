@@ -28,11 +28,12 @@ async def delete_user_with_id(id: int, db_session: AsyncSession) -> bool:
     await db_session.commit()
     return True
 
-async def update_user(id: int, user_update: UserUpdate, db_session: AsyncSession) -> bool:
+async def update_user(id: int, user_update: UserUpdate, db_session: AsyncSession) -> User:
 
-    user_db = await db_session.execute(select(User).where(User.id == id))
-    user_db = user_db.scalar_one_or_none()
-    
+    resualt = await db_session.execute(select(User).where(User.id == id))
+    user_db = resualt.scalar_one_or_none()
+    if not user_db:
+        return None
     
     update_data = user_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -41,3 +42,4 @@ async def update_user(id: int, user_update: UserUpdate, db_session: AsyncSession
     db_session.add(user_db)
     await db_session.commit()
     await db_session.refresh(user_db) 
+    return user_db

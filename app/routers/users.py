@@ -80,5 +80,6 @@ async def update_user(
             user: Annotated[UserInDb, Depends(one_or_more_scopes(["user:*"]))],
             db_session: Annotated[AsyncSession, Depends(get_db_session)]):
 
-    await userRepo.update_user(user_id, updated_user, db_session)
-    return {"Updated:": updated_user}
+    user_updated = await userRepo.update_user(user_id, updated_user, db_session)
+    user_in_db = UserInDb.model_validate(user_updated)
+    return UserOut(**user_in_db.model_dump())
