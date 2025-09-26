@@ -1,12 +1,14 @@
  {
   "admin": [
-    "user:*"
+    "user:*",
+    "asset:*"
   ],
   "artist": [
-    "user:me"
+    "user:me",
+    "asset:me"
   ],
   "guest": [
-    "projects:read",
-    "assets:read"
+    "user:read",
+    "asset:read"
   ]
 }

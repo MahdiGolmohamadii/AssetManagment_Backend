@@ -51,14 +51,16 @@ def one_or_more_scopes(required_scopes: list[str]):
     async def _one_or_more_scopes(user: Annotated[UserInDb, Depends(get_current_user)]):
         user_avaiable_scopes = util.get_scopes(user.roles)
         if not any(scope in user_avaiable_scopes for scope in required_scopes):
-            raise HTTPException(status_code=401, detail="you are not enough")
+            raise HTTPException(status_code=401, detail="User Not Authorized To Access")
         return user
     return _one_or_more_scopes
         
 
-async def authenticate_user(username: str, password: str, db_session: AsyncSession) -> User:
+async def authenticate_user(username: str, password: str, db_session: AsyncSession) -> UserInDb:
     user_in_db = await repositories.user.get_user_by_username(username, db_session)
-    
+    if user_in_db is None:
+        raise CREDENTIAL_EXCEPTION
+
     if not check_plain_password(password, user_in_db.password):
         raise CREDENTIAL_EXCEPTION
     user_in_db = UserInDb.model_validate(user_in_db)
@@ -76,6 +78,7 @@ async def get_current_user(
         authenticate_value = f"Bearer scope={security_scopes.scope_str}"
     else:
         authenticate_value = "Bearer"
+    
     CREDENTIAL_EXCEPTION = HTTPException(
         status_code=401,
         detail="invalid user credentials",
@@ -100,7 +103,6 @@ async def get_current_user(
     user_in_db = UserInDb.model_validate(user_in_db)
     for scope in security_scopes.scopes:
         if scope not in token_data.scopes:
-            # raise CREDENTIAL_EXCEPTION
             raise HTTPException(
                 status_code=401,
                 detail="Not enough permissions",
