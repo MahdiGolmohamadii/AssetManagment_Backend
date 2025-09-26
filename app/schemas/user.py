@@ -11,3 +11,8 @@ class UserInDb(UserInput):
     class Config:
         from_attributes = True
 
+
+class UserOut(BaseModel):
+    username: str
+    roles: str
+

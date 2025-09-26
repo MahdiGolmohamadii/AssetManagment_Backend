@@ -16,6 +16,7 @@ from app.core.config import Settings, get_settings
 from app.models.user import User
 from app.schemas.token import TokenData
 from app.schemas.user import UserInDb
+import app.repositories as repositories
 
 oauth_scheme = OAuth2PasswordBearer(
                         tokenUrl="/token",
@@ -46,11 +47,6 @@ def create_access_token(settings: Settings, data: dict, expires_delta: timedelta
     return encoded_jwt
 
 
-# def one_or_more_scopes(required_scopes: list[str], user:User) -> bool:
-#     user_avaiable_scopes = util.get_scopes(user.roles)
-    
-#     return any(scope in user_avaiable_scopes for scope in required_scopes)
-
 def one_or_more_scopes(required_scopes: list[str]):
     async def _one_or_more_scopes(user: Annotated[UserInDb, Depends(get_current_user)]):
         user_avaiable_scopes = util.get_scopes(user.roles)
@@ -61,24 +57,12 @@ def one_or_more_scopes(required_scopes: list[str]):
         
 
 async def authenticate_user(username: str, password: str, db_session: AsyncSession):
-    user_db = await db_session.execute(select(User).where(User.username == username))
-    user_db = user_db.scalar_one_or_none()
-    if user_db is None:
-        raise CREDENTIAL_EXCEPTION
-    user_in_db = UserInDb.model_validate(user_db)
+    user_in_db = await repositories.user.get_user_by_username(username, db_session)
     
     if not check_plain_password(password, user_in_db.password):
         raise CREDENTIAL_EXCEPTION
     return user_in_db
-    
 
-
-async def get_user_from_db(db_session: AsyncSession, username: str):
-    user = await db_session.execute(select(User).where(User.username == username))
-    user = user.scalar_one_or_none()
-    if user is None:
-        raise CREDENTIAL_EXCEPTION
-    return UserInDb.model_validate(user)
 
 
 async def get_current_user(
@@ -99,20 +83,19 @@ async def get_current_user(
 
     try:
         payload = jwt.decode(token, settings.secrete_key, algorithms=[settings.algorithm])
-        username = payload.get("sub")
-        if username is None:
+        userid = payload.get("sub")
+        if userid is None:
             raise CREDENTIAL_EXCEPTION
-        scope: str = payload.get("scope", "")
+        
+        userid = int(userid)
         role: str = payload.get("role", "")
-        print(role)
         token_scopes = util.get_scopes(role)
-        print(token_scopes)
-        token_scope_list = token_scopes.split(" ")
-        token_data = TokenData(username=username, scopes=token_scope_list)
+        token_scope_list = token_scopes.split()
+        token_data = TokenData(user_id=userid, scopes=token_scope_list, role=[role])
     except (InvalidTokenError, ValidationError):
         raise CREDENTIAL_EXCEPTION
     
-    user_in_db = await get_user_from_db(db_session=db_session, username=token_data.username)
+    user_in_db = await repositories.user.get_user_by_id(userid, db_session)
     
     for scope in security_scopes.scopes:
         if scope not in token_data.scopes:

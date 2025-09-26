@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 
 from app.core import utils
-from app.schemas.user import UserInput, UserInDb
+from app.schemas.user import UserInput, UserInDb, UserOut
 from app.models.user import User
 from app.core import security
 from app.core.database import get_db_session
@@ -36,16 +36,13 @@ async def create_new_account(
         await db_session.rollback()
         raise HTTPException(status_code=500, detail=f"something whent wrong; {e}")
     
-@router.get("/users/me")
-async def get_my_user(user: Annotated[UserInDb, Depends(get_current_user)]):
-    return user
 
+@router.get("/user/me", response_model=UserOut)
+async def scopes_artist_test(user: Annotated[UserInDb, Depends(get_current_user)]):
+    user = user.model_dump()
+    return UserOut(**user)
 
-@router.get("/user/me")
-async def scopes_artist_test(user: Annotated[User, Security(get_current_user, scopes=["projects:read"])]):
-    return user
-
-@router.get("/user/{user_id}")
+@router.get("/user/{user_id}", response_model=UserOut)
 async def get_user(
             user_id:int, 
             user: Annotated[UserInDb, Depends(one_or_more_scopes(["user:*", "user:me"]))], 
@@ -57,9 +54,9 @@ async def get_user(
     if user_in_db is None:
         raise HTTPException(status_code=401, detail="user not found")
     if "user:*" in user_scopes_list:
-        return user_in_db
+        return UserOut(**user_in_db.model_dump())
     elif "user:me" in user_scopes_list and user.id == user_id:
-        return user_in_db
+        return UserOut(**user_in_db.model_dump())
     raise HTTPException(status_code=401, detail="you do not have access to user you wanted")
 
     

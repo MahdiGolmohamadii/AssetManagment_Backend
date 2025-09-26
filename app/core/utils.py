@@ -11,6 +11,4 @@ def get_scopes(role: str) -> str:
     for rl in roles:
         for scope in roles_access_scope.get(rl, ""):
             res = res + scope + " "
-
-    print(res)
     return res
