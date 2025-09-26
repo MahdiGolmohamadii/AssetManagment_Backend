@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 
 from app.core import utils
-from app.schemas.user import UserInput, UserInDb, UserOut
+from app.schemas.user import UserInput, UserInDb, UserOut, UserUpdate
 from app.models.user import User
 from app.core import security
 from app.core.database import get_db_session
@@ -51,6 +51,7 @@ async def get_user(
     user_scopes = utils.get_scopes(user.roles)
     user_scopes_list = user_scopes.split(" ")
     user_in_db = await userRepo.get_user_by_id(user_id, db_session)
+    user_in_db = UserInDb.model_validate(user_in_db)
     if user_in_db is None:
         raise HTTPException(status_code=401, detail="user not found")
     if "user:*" in user_scopes_list:
@@ -59,4 +60,25 @@ async def get_user(
         return UserOut(**user_in_db.model_dump())
     raise HTTPException(status_code=401, detail="you do not have access to user you wanted")
 
-    
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+                user_id:int, 
+                user: Annotated[UserInDb, Depends(one_or_more_scopes(["user:*"]))], 
+                db_session: Annotated[AsyncSession, Depends(get_db_session)]):
+    deleted = await userRepo.delete_user_with_id(user_id, db_session)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="user not found!")
+    return {"deleted id:": user_id}
+
+
+@router.put("/users/{user_id}")
+async def update_user(
+            user_id: int,
+            updated_user: UserUpdate,
+            user: Annotated[UserInDb, Depends(one_or_more_scopes(["user:*"]))],
+            db_session: Annotated[AsyncSession, Depends(get_db_session)]):
+
+    await userRepo.update_user(user_id, updated_user, db_session)
+    return {"Updated:": updated_user}

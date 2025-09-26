@@ -16,3 +16,7 @@ class UserOut(BaseModel):
     username: str
     roles: str
 
+class UserUpdate(BaseModel):
+    username: str | None = None
+    roles: str | None = None
+

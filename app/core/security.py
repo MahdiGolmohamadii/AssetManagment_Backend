@@ -56,11 +56,12 @@ def one_or_more_scopes(required_scopes: list[str]):
     return _one_or_more_scopes
         
 
-async def authenticate_user(username: str, password: str, db_session: AsyncSession):
+async def authenticate_user(username: str, password: str, db_session: AsyncSession) -> User:
     user_in_db = await repositories.user.get_user_by_username(username, db_session)
     
     if not check_plain_password(password, user_in_db.password):
         raise CREDENTIAL_EXCEPTION
+    user_in_db = UserInDb.model_validate(user_in_db)
     return user_in_db
 
 
@@ -96,7 +97,7 @@ async def get_current_user(
         raise CREDENTIAL_EXCEPTION
     
     user_in_db = await repositories.user.get_user_by_id(userid, db_session)
-    
+    user_in_db = UserInDb.model_validate(user_in_db)
     for scope in security_scopes.scopes:
         if scope not in token_data.scopes:
             # raise CREDENTIAL_EXCEPTION
