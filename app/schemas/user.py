@@ -13,6 +13,7 @@ class UserInDb(UserInput):
 
 
 class UserOut(BaseModel):
+    id: int
     username: str
     roles: str
 

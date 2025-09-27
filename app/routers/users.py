@@ -29,13 +29,13 @@ async def create_new_account(
     
 
 @router.get("/user/me", response_model=UserOut)
-async def scopes_artist_test(
+async def get_user_me(
             user: Annotated[UserInDb, Depends(get_current_user)]):
     
     user = user.model_dump()
     return UserOut(**user)
 
-@router.get("/user/{user_id}", response_model=UserOut)
+@router.get("/users/{user_id}", response_model=UserOut)
 async def get_user(
             user_id:int, 
             user: Annotated[UserInDb, Depends(one_or_more_scopes(["user:*", "user:me"]))], 
@@ -45,7 +45,7 @@ async def get_user(
     user_scopes_list = user_scopes.split(" ")
     user_in_db = await userRepo.get_user_by_id(user_id, db_session)
     if user_in_db is None:
-        raise HTTPException(status_code=401, detail="user not found")
+        raise HTTPException(status_code=404, detail="user not found")
     user_in_db = UserInDb.model_validate(user_in_db)
     if "user:*" in user_scopes_list:
         return UserOut(**user_in_db.model_dump())

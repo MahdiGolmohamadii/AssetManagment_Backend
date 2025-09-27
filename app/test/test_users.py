@@ -7,6 +7,7 @@ from httpx import AsyncClient, ASGITransport
 
 from app.main import app
 from app.models.user import User
+from app.schemas.user import UserUpdate
 from app.core.database import Base
 from app.core.security import get_db_session
 from app.core import security
@@ -16,9 +17,10 @@ from app.repositories import user as user_repo
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 engine = create_async_engine(DATABASE_URL, echo=False)
 
-VALIDUSER ={"username":"validuser", "password":"validuser", "roles": "guest"}
-INVALIDUSER = {"username":"notvalid", "password":"notvalid"}
-ADMINUSER = {"username":"admin", "password":"admin", "roles": "admin"}
+ADMINUSER = {"username":"admin", "password":"admin", "roles": "admin", "id":1}
+VALIDUSER ={"username":"validuser", "password":"validuser", "roles": "guest", "id":2}
+INVALIDUSER = {"username":"notvalid", "password":"notvalid", "id": 100}
+
 AsyncTestSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
@@ -61,7 +63,13 @@ async def user_token(async_client):
     assert response.status_code == 200
     return response.json()["access_token"]
 
-app.dependency_overrides[get_db_session] = get_test_session
+@pytest_asyncio.fixture()
+async def admin_token(async_client):
+    data = {"username": ADMINUSER["username"], "password": ADMINUSER["password"]}
+    response = await async_client.post("/token", data=data)
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
 
 async def get_test_session():
     async with engine.begin() as conn:
@@ -73,13 +81,15 @@ async def get_test_session():
     finally:
         await db.close()
 
-@pytest_asyncio.fixture()
-async def admin_token(async_client):
-    data = {"username": ADMINUSER["username"], "password": ADMINUSER["password"]}
-    response = await async_client.post("/token", data=data)
-    assert response.status_code == 200
-    return response.json()["access_token"]
+app.dependency_overrides[get_db_session] = get_test_session
 
+
+@pytest.mark.asyncio
+async def test_users_me(async_client, create_admin, admin_token):
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = await async_client.get("/user/me", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == {"username": ADMINUSER["username"], "roles": ADMINUSER["roles"], "id": ADMINUSER["id"]}
 
 
 @pytest.mark.asyncio
@@ -87,11 +97,47 @@ async def test_create_new_account(async_client):
     payload = {"username": VALIDUSER["username"], "password": VALIDUSER["password"]}
     response = await async_client.post("/signup", json=payload)
     assert response.status_code == 200
-    assert response.json() == {"username": VALIDUSER["username"], "roles": VALIDUSER["roles"]}
+    assert response.json() == {"username": VALIDUSER["username"], "roles": VALIDUSER["roles"], "id":VALIDUSER["id"]}
 
 @pytest.mark.asyncio
-async def test_users_me(async_client, create_admin, admin_token):
+async def test_get_user(async_client, admin_token, user_token):
+    # admin
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = await async_client.get("/user/me", headers=headers)
+    response = await async_client.get(f"users/{VALIDUSER["id"]}", headers = headers)
     assert response.status_code == 200
-    assert response.json() == {"username": ADMINUSER["username"], "roles": ADMINUSER["roles"]}
+    assert response.json() == {"username": VALIDUSER["username"], "roles": VALIDUSER["roles"], "id":VALIDUSER["id"]}
+    response = await async_client.get(f"/users/{INVALIDUSER["id"]}", headers=headers)
+    assert response.status_code == 404
+
+    # check roles access
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response = await async_client.get(f"users/{ADMINUSER['id']}", headers=headers)
+    assert response.status_code == 401
+    assert response.json() == {"detail": "User Not Authorized To Access"}
+
+@pytest.mark.asyncio
+async def test_update_user(async_client, admin_token, user_token):
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    data = UserUpdate(roles="artist").model_dump(exclude_unset=True)
+    response = await async_client.put(f"/users/{VALIDUSER['id']}", json=data, headers=headers)
+    assert response.status_code == 200
+    VALIDUSER["roles"] = "artist"
+    assert response.json() == {"username": VALIDUSER["username"], "roles": VALIDUSER["roles"], "id":VALIDUSER["id"]}
+
+    # Check VALIDUSER new access
+    headers = {"Authorization": f"Bearer {user_token}"}
+    response = await async_client.get(f"users/{VALIDUSER['id']}", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == {"username": VALIDUSER["username"], "roles": VALIDUSER["roles"], "id":VALIDUSER["id"]}
+
+@pytest.mark.asyncio
+async def test_delete_user(async_client, admin_token):
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = await async_client.delete(f"users/{VALIDUSER['id']}", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == {"deleted id:": VALIDUSER["id"]}
+
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = await async_client.get(f"users/{VALIDUSER["id"]}", headers = headers)
+    assert response.status_code == 404
+    assert response.json() == {"detail":"user not found"}
