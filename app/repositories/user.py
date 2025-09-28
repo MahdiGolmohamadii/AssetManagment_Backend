@@ -14,7 +14,6 @@ async def add_new_user(user_input: UserInput, db_session: AsyncSession) -> User:
     
     hashed_pass = security.hash_plain_password(user_input.password)
     new_user = User(username = user_input.username, password=hashed_pass, roles = "guest")
-    
     try:
         db_session.add(new_user)
         await db_session.commit()
@@ -32,6 +31,7 @@ async def get_user_by_id(id:int, db_session: AsyncSession) -> User:
     user_db = result.scalar_one_or_none()
     if not user_db:
         return None
+    
     return user_db
 
 
@@ -40,6 +40,7 @@ async def get_user_by_username(username: str, db_session: AsyncSession) -> User:
     user_db = result.scalar_one_or_none()
     if not user_db:
         return None
+    
     return user_db
 
 async def delete_user_with_id(id: int, db_session: AsyncSession) -> bool:
@@ -47,6 +48,7 @@ async def delete_user_with_id(id: int, db_session: AsyncSession) -> bool:
     user_in_db = result.scalar_one_or_none()
     if not user_in_db:
         return False
+    
     await db_session.delete(user_in_db)
     await db_session.commit()
     return True
@@ -61,8 +63,28 @@ async def update_user(id: int, user_update: UserUpdate, db_session: AsyncSession
     update_data = user_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(user_db, key, value)
-
     db_session.add(user_db)
     await db_session.commit()
     await db_session.refresh(user_db) 
     return user_db
+
+async def find_user(
+            db_session: AsyncSession, 
+            id: int | None = None, 
+            username: str | None = None, 
+            role: str | None = None, 
+            limit: int = 10, 
+            offset: int = 0) -> list[User]:
+    
+    query = select(User)
+    if id:
+        query = query.where(User.id == id)
+    if role:
+        query = query.where((User.roles.ilike(f"%{role}%")))
+    if username:
+        query = query.where(User.username == username)
+
+    query = query.limit(limit).offset(offset)
+    users = await db_session.execute(query)
+    res = users.scalars().all()
+    return res

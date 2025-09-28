@@ -79,3 +79,14 @@ async def update_user(
         raise HTTPException(status_code=404, detail="user not found")
     user_in_db = UserInDb.model_validate(user_updated)
     return UserOut(**user_in_db.model_dump())
+
+@router.get("/users/")
+async def search_user(
+            db_session: Annotated[AsyncSession, Depends(get_db_session)], 
+            user: Annotated[UserInDb, Depends(get_current_user)],
+            id: int | None = None, 
+            username: str | None = None, 
+            role: str | None = None):
+    
+    users = await userRepo.find_user(db_session=db_session, id=id, username=username, role=role)
+    return [UserOut.model_validate(user) for user in users]

@@ -37,7 +37,7 @@ async def get_test_session():
     finally:
         await db.close()
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture
 async def create_admin():
     async for session in get_test_session():
         hashed_pass = security.hash_plain_password(ADMINUSER["password"])
@@ -51,7 +51,7 @@ async def create_admin():
         await session.refresh(admin)
         return admin
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def async_client():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
@@ -63,7 +63,7 @@ async def user_token(async_client):
     assert response.status_code == 200
     return response.json()["access_token"]
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture
 async def admin_token(async_client):
     data = {"username": ADMINUSER["username"], "password": ADMINUSER["password"]}
     response = await async_client.post("/token", data=data)
