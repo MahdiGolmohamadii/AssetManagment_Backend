@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories import asset as asset_repo
-from app.schemas.asset import AssetNew
+from app.schemas.asset import AssetNew, AssetVersionNew
 from app.core.database import get_db_session
 router = APIRouter(tags=["Assets"])
 
@@ -15,3 +15,7 @@ async def get_asset_root():
 @router.post("/assets")
 async def add_new_asset(new_asset: AssetNew, db_session: Annotated[AsyncSession,Depends(get_db_session)]):
     await asset_repo.add_new_asset(new_asset, db_session)
+
+@router.post("/users/{asset_id}")
+async def add_new_version(asset_id:int, new_version: AssetVersionNew, db_session: Annotated[AsyncSession, Depends(get_db_session)]):
+    await asset_repo.add_new_version(new_version, asset_id, db_session)
