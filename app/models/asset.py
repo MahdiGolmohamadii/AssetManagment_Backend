@@ -4,13 +4,17 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
+
+
 class Asset(Base):
     __tablename__ = "assets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column()
+    name: Mapped[str] = mapped_column(nullable=False)
+    description: Mapped[str] = mapped_column()
     created_at :  Mapped[datetime] = mapped_column(default=datetime.now)
     last_update: Mapped[datetime] = mapped_column(default=datetime.now, onupdate=datetime.now)
+    
     versions: Mapped[list["AssetVersion"]] = relationship(back_populates="parent_asset")
 
 

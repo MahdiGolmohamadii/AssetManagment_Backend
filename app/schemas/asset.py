@@ -12,10 +12,12 @@ class AssetVersionInDb(AssetVersionNew):
 
 class AssetNew(BaseModel):
     name: str
+    description: str
 
 class AssetInDb(BaseModel):
     id: int
     name: str
+    description : str
     version: list[AssetVersionInDb]
 
 

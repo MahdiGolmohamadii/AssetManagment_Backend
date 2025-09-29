@@ -3,14 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app.models.asset import Asset, AssetVersion
-from app.core.database import get_db_session
 from app.schemas.asset import AssetNew, AssetVersionNew
 
 
 
 async def add_new_asset(new_asset: AssetNew, db_session: AsyncSession):
     
-    new_asset = Asset(name = new_asset.name)
+    new_asset = Asset(**new_asset.model_dump())
     try:
         db_session.add(new_asset)
         await db_session.commit()
