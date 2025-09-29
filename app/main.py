@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 
-from app.routers import users, auth
+from app.routers import users, auth, assets
 
 from app.core import config
 
@@ -22,6 +22,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(users.router)
 app.include_router(auth.router)
+app.include_router(assets.router)
 
 @app.get("/root")
 async def get_root():
