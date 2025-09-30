@@ -14,19 +14,19 @@ class Asset(Base):
     description: Mapped[str] = mapped_column()
     created_at :  Mapped[datetime] = mapped_column(default=datetime.now)
     last_update: Mapped[datetime] = mapped_column(default=datetime.now, onupdate=datetime.now)
-    
-    versions: Mapped[list["AssetVersion"]] = relationship(back_populates="parent_asset")
+
+    versions: Mapped[list["AssetVersion"]] = relationship(back_populates="parent_asset", cascade="all, delete-orphan")
 
 
 class AssetVersion(Base):
     __tablename__ = "asset_versions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    version_number: Mapped[float] = mapped_column(nullable=False)
+    version_number: Mapped[int] = mapped_column(nullable=False)
     file_path : Mapped[str] = mapped_column(nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
     last_update: Mapped[datetime] = mapped_column(default=datetime.now, onupdate=datetime.now)
 
-    asset_id: Mapped[int] = mapped_column(ForeignKey("assets.id"))
+    asset_id: Mapped[int] = mapped_column(ForeignKey("assets.id", ondelete='CASCADE'))
     parent_asset: Mapped["Asset"] = relationship(back_populates="versions")
     
