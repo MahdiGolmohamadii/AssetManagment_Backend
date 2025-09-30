@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.models.asset import Asset, AssetVersion
-from app.schemas.asset import AssetNew, AssetVersionNew, AssetUpdate
+from app.schemas.asset import AssetNew, AssetVersionNew, AssetUpdate, AssetVersionUpdate
 
 
 
@@ -87,6 +87,48 @@ async def delete_asset(asset_id: int , db_session: AsyncSession):
     return asset_in_db
 
 async def get_asset_verison(asset_id: int, version_id: int, db_session: AsyncSession):
-    result = await db_session.execute(select(AssetVersion).where(AssetVersion.asset_id == asset_id).where(AssetVersion.id == version_id))
-    version_in_db = result.scalar_one_or_none()
-    return version_in_db
+    try:
+        result = await db_session.execute(select(AssetVersion).where(AssetVersion.asset_id == asset_id).where(AssetVersion.id == version_id))
+        version_in_db = result.scalar_one_or_none()
+        return version_in_db
+    except IntegrityError:
+        raise AssetNotFound
+    except Exception as e:
+        await db_session.rollback()
+        raise e
+
+async def update_asset_version(asset_id: int, version_id: int, version_update: AssetVersionUpdate, db_session: AsyncSession):
+    version_in_db = await get_asset_verison(asset_id,version_id, db_session)
+
+    if version_in_db is None:
+        raise AssetNotFound
+    
+    updated_version_dict = version_update.model_dump(exclude_unset=True)
+    for key, val in updated_version_dict.items():
+        setattr(version_in_db, key, val)
+
+    try:
+        db_session.add(version_in_db)
+        await db_session.commit()
+        await db_session.refresh(version_in_db)
+        return version_in_db
+    except IntegrityError:
+        raise AssetNotFound
+    except Exception as e:
+        await db_session.rollback()
+        raise e
+    
+async def delete_asset_version(asset_id: int, version_id: int, db_sesssion: AsyncSession):
+    version_in_db = await get_asset_verison(asset_id, version_id, db_sesssion)
+    if version_in_db is None:
+        raise AssetNotFound
+    
+    try:
+        await db_sesssion.delete(version_in_db)
+        await db_sesssion.commit()
+        return version_in_db
+    except IntegrityError:
+        raise AssetNotFound
+    except Exception as e:
+        await db_sesssion.rollback()
+        raise e
