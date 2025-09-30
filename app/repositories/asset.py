@@ -85,3 +85,8 @@ async def delete_asset(asset_id: int , db_session: AsyncSession):
     await db_session.commit()
 
     return asset_in_db
+
+async def get_asset_verison(asset_id: int, version_id: int, db_session: AsyncSession):
+    result = await db_session.execute(select(AssetVersion).where(AssetVersion.asset_id == asset_id).where(AssetVersion.id == version_id))
+    version_in_db = result.scalar_one_or_none()
+    return version_in_db

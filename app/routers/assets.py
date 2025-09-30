@@ -72,3 +72,10 @@ async def delete_asset(asset_id: int, db_session: Annotated[AsyncSession, Depend
         raise HTTPException(status_code=500, detail=f"Something Went Wrong: {e}")
     
     return AssetOut.model_validate(deleted_asset)
+
+@router.get("/users/{asset_id}/{version_id}")
+async def get_asset_version(asset_id: int, version_id: int, db_session: Annotated[AsyncSession, Depends(get_db_session)]):
+    version_in_db = await asset_repo.get_asset_verison(asset_id, version_id, db_session)
+    if version_in_db is None:
+        raise HTTPException(status_code=404, detail="Asset Or Version Not Found!")
+    return version_in_db
