@@ -8,8 +8,14 @@ class AssetStatus(str, Enum):
     NeedEdit = "NeedEdit"
     Published = "Published"
 
-#ASSET VERSION
+class AssetType(str, Enum):
+    texture = "texture"
+    mode = "model"
+    rig = "rig"
+    animaton = "animation"
 
+
+#ASSET VERSION
 class AssetVersionNew(BaseModel):
     version_number: int
     file_path: str
@@ -40,6 +46,7 @@ class AssetVersionUpdate(BaseModel):
 class AssetNew(BaseModel):
     name: str
     description: str
+    asset_type: AssetType
 
 class AssetInDb(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -47,6 +54,7 @@ class AssetInDb(BaseModel):
     id: int
     name: str
     description : str
+    asset_type: AssetType
     created_at : datetime
     last_update: datetime
     versions: list[AssetVersionInDb] | None
@@ -61,5 +69,11 @@ class AssetOut(AssetNew):
 class AssetUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
+    asset_type: AssetType | None = None
 
-    
+class AssetSearch(BaseModel):
+    id: int | None = None
+    name: str | None = None
+    asset_type: AssetType | None = None
+    limit: int = 10
+    offset: int = 0

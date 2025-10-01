@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.models.asset import Asset, AssetVersion
-from app.schemas.asset import AssetNew, AssetVersionNew, AssetUpdate, AssetVersionUpdate
+from app.schemas.asset import AssetNew, AssetVersionNew, AssetUpdate, AssetVersionUpdate, AssetSearch
 
 
 
@@ -18,29 +18,11 @@ async def add_new_asset(new_asset: AssetNew, db_session: AsyncSession):
         db_session.add(new_asset)
         await db_session.commit()
         await db_session.refresh(new_asset, attribute_names=["versions"])
-        return new_asset
-    except IntegrityError:
-        await db_session.rollback()
-        # raise UsernameAlreadyExists
-    except Exception:
-        await db_session.rollback()
-    
-    return None
-
-async def add_new_version(new_version: AssetVersionNew, asset_id: int, db_session: AsyncSession):
-    new_version = AssetVersion(asset_id = asset_id,  **new_version.model_dump())
-
-    try:
-        db_session.add(new_version)
-        await db_session.commit()
-        await db_session.refresh(new_version)
-        return new_version
-    except IntegrityError:
-        await db_session.rollback()
-        raise AssetNotFound
+        return new_asset        
     except Exception as e:
         await db_session.rollback()
         raise e
+    
 
 
 async def get_assets(db_session: AsyncSession, asset_id: int | None = None):
@@ -85,6 +67,37 @@ async def delete_asset(asset_id: int , db_session: AsyncSession):
     await db_session.commit()
 
     return asset_in_db
+
+
+async def search_assets(asset_search: AssetSearch, db_session: AsyncSession):
+    query = select(Asset).options(selectinload(Asset.versions))
+
+    if asset_search.id:
+        query = query.where(Asset.id == asset_search.id)
+    if asset_search.asset_type:
+        query = query.where(Asset.asset_type == asset_search.asset_type)
+    if asset_search.name:
+        query = query.where(Asset.name == asset_search.name)
+    
+    query.limit(asset_search.limit).offset(asset_search.offset)
+    users = await db_session.execute(query)
+    result = users.scalars().all()
+    return result
+
+async def add_new_version(new_version: AssetVersionNew, asset_id: int, db_session: AsyncSession):
+    new_version = AssetVersion(asset_id = asset_id,  **new_version.model_dump())
+
+    try:
+        db_session.add(new_version)
+        await db_session.commit()
+        await db_session.refresh(new_version)
+        return new_version
+    except IntegrityError:
+        await db_session.rollback()
+        raise AssetNotFound
+    except Exception as e:
+        await db_session.rollback()
+        raise e
 
 async def get_asset_verison(asset_id: int, version_id: int, db_session: AsyncSession):
     try:

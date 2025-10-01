@@ -1,9 +1,9 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories import asset as asset_repo
-from app.schemas.asset import AssetNew, AssetOut, AssetInDb, AssetUpdate
+from app.schemas.asset import AssetNew, AssetOut, AssetInDb, AssetUpdate, AssetSearch
 from app.schemas.asset import AssetVersionInDb, AssetVersionNew, AssetVersionOut, AssetVersionUpdate
 from app.core.database import get_db_session
 
@@ -13,9 +13,12 @@ router = APIRouter(tags=["Assets"])
 
 @router.post("/assets")
 async def add_new_asset(new_asset: AssetNew, db_session: Annotated[AsyncSession,Depends(get_db_session)]):
-    new_asset = await asset_repo.add_new_asset(new_asset, db_session)
-    new_asset_in_db = AssetInDb.model_validate(new_asset)
-    return AssetOut(**new_asset_in_db.model_dump())
+    try:
+        result = await asset_repo.add_new_asset(new_asset, db_session)
+        new_asset_in_db = AssetInDb.model_validate(result)
+        return AssetOut(**new_asset_in_db.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Something Went Wrong: {e}")
 
 @router.post("/assets/{asset_id}")
 async def add_new_version(asset_id:int, new_version: AssetVersionNew, db_session: Annotated[AsyncSession, Depends(get_db_session)]):
@@ -30,10 +33,10 @@ async def add_new_version(asset_id:int, new_version: AssetVersionNew, db_session
     return AssetVersionOut(**new_version_in_db.model_dump())
 
 
-@router.get("/assets/")
-async def get_all_assets(db_session: Annotated[AsyncSession, Depends(get_db_session)]):
-    all_assets = await asset_repo.get_assets(db_session=db_session)
-    return [AssetOut.model_validate(asset) for asset in all_assets]
+# @router.get("/assets/")
+# async def get_all_assets(db_session: Annotated[AsyncSession, Depends(get_db_session)]):
+#     all_assets = await asset_repo.get_assets(db_session=db_session)
+#     return [AssetOut.model_validate(asset) for asset in all_assets]
 
 @router.get("/assets/{asset_id}")
 async def get_asset_by_id(db_session: Annotated[AsyncSession, Depends(get_db_session)], asset_id: int):
@@ -72,6 +75,12 @@ async def delete_asset(asset_id: int, db_session: Annotated[AsyncSession, Depend
         raise HTTPException(status_code=500, detail=f"Something Went Wrong: {e}")
     
     return AssetOut.model_validate(deleted_asset)
+
+@router.get("/assets/")
+async def search_assets(asset_search: Annotated[AssetSearch, Query()], db_session: Annotated[AsyncSession, Depends(get_db_session)]):
+    result = await asset_repo.search_assets(asset_search, db_session)
+    return [AssetOut.model_validate(user) for user in result]
+
 
 @router.get("/users/{asset_id}/{version_id}")
 async def get_asset_version(asset_id: int, version_id: int, db_session: Annotated[AsyncSession, Depends(get_db_session)]):

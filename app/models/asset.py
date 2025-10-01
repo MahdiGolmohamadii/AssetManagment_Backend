@@ -3,7 +3,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
-from app.schemas.asset import AssetStatus
+from app.schemas.asset import AssetStatus, AssetType
 
 
 
@@ -14,6 +14,7 @@ class Asset(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column()
+    asset_type: Mapped[AssetType] = mapped_column(nullable=False)
     created_at :  Mapped[datetime] = mapped_column(default=datetime.now)
     last_update: Mapped[datetime] = mapped_column(default=datetime.now, onupdate=datetime.now)
 
