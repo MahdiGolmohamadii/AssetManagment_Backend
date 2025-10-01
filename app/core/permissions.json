@@ -1,15 +1,17 @@
  {
   "admin": [
     "user:*",
-    "asset:read"
+    "asset:*",
+    "version:*"
   ],
   "artist": [
     "user:me",
-    "asset:read",
-    "asset:edit:me"
+    "asset:view",
+    "asset:edit:me",
+    "version:*"
   ],
   "guest": [
-    "user:read",
-    "asset:read"
+    "user:read"
   ]
 }
+
