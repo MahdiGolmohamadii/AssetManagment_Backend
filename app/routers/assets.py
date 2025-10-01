@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories import asset as asset_repo
 from app.schemas.asset import AssetNew, AssetOut, AssetInDb, AssetUpdate, AssetSearch
-from app.schemas.asset import AssetVersionInDb, AssetVersionNew, AssetVersionOut, AssetVersionUpdate
+from app.schemas.asset import AssetVersionInDb, AssetVersionNew, AssetVersionOut, AssetVersionUpdate, AssetVersionSearch
 from app.core.database import get_db_session
 
 
@@ -32,11 +32,6 @@ async def add_new_version(asset_id:int, new_version: AssetVersionNew, db_session
     new_version_in_db = AssetVersionInDb.model_validate(new_version)
     return AssetVersionOut(**new_version_in_db.model_dump())
 
-
-# @router.get("/assets/")
-# async def get_all_assets(db_session: Annotated[AsyncSession, Depends(get_db_session)]):
-#     all_assets = await asset_repo.get_assets(db_session=db_session)
-#     return [AssetOut.model_validate(asset) for asset in all_assets]
 
 @router.get("/assets/{asset_id}")
 async def get_asset_by_id(db_session: Annotated[AsyncSession, Depends(get_db_session)], asset_id: int):
@@ -82,7 +77,7 @@ async def search_assets(asset_search: Annotated[AssetSearch, Query()], db_sessio
     return [AssetOut.model_validate(user) for user in result]
 
 
-@router.get("/users/{asset_id}/{version_id}")
+@router.get("/assets/{asset_id}/{version_id}")
 async def get_asset_version(asset_id: int, version_id: int, db_session: Annotated[AsyncSession, Depends(get_db_session)]):
     try:
         version_in_db = await asset_repo.get_asset_verison(asset_id, version_id, db_session)
@@ -95,7 +90,7 @@ async def get_asset_version(asset_id: int, version_id: int, db_session: Annotate
         raise HTTPException(status_code=404, detail="Asset Or Version Not Found!")
     return version_in_db
 
-@router.put("/users/{asset_id}/{version_id}")
+@router.put("/assets/{asset_id}/{version_id}")
 async def update_asset_version(asset_id: int, version_id: int, version_update: AssetVersionUpdate, db_session: Annotated[AsyncSession, Depends(get_db_session)]):
     try:
         updated_version = await asset_repo.update_asset_version(asset_id,version_id,version_update, db_session)
@@ -108,7 +103,7 @@ async def update_asset_version(asset_id: int, version_id: int, version_update: A
     
     return AssetVersionOut.model_validate(updated_version)
 
-@router.delete("/users/{asset_id}/{version_id}")
+@router.delete("/assets/{asset_id}/{version_id}")
 async def delete_asset_version(asset_id: int, version_id: int, db_session: Annotated[AsyncSession, Depends(get_db_session)]):
     try:
         deleted_version = await asset_repo.delete_asset_version(asset_id,version_id,db_session)

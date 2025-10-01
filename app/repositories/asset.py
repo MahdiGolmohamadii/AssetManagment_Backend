@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.models.asset import Asset, AssetVersion
-from app.schemas.asset import AssetNew, AssetVersionNew, AssetUpdate, AssetVersionUpdate, AssetSearch
+from app.schemas.asset import AssetNew, AssetVersionNew, AssetUpdate, AssetVersionUpdate, AssetSearch, AssetVersionSearch
 
 
 
@@ -145,3 +145,19 @@ async def delete_asset_version(asset_id: int, version_id: int, db_sesssion: Asyn
     except Exception as e:
         await db_sesssion.rollback()
         raise e
+    
+
+async def search_assets_version(asset_id:int, version_search: AssetVersionSearch, db_session: AsyncSession):
+    query = select(AssetVersion).where(AssetVersion.asset_id == asset_id)
+
+    if version_search.id:
+        query = query.where(AssetVersion.id == version_search.id)
+    if version_search.version_number:
+        query = query.where(AssetVersion.version_number == version_search.version_number)
+    if version_search.status:
+        query = query.where(AssetVersion.status == version_search.status)
+    
+    query.limit(version_search.limit).offset(version_search.offset)
+    users = await db_session.execute(query)
+    result = users.scalars().all()
+    return result

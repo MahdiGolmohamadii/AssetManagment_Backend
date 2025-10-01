@@ -38,6 +38,13 @@ class AssetVersionUpdate(BaseModel):
     version_number: int | None = None
     file_path: str | None = None
     status: AssetStatus | None = None
+
+class AssetVersionSearch(BaseModel):
+    id: int | None = None
+    version_number: int | None = None
+    status: AssetStatus | None = None
+    limit: int = 10
+    offset: int = 0
     
 
 
