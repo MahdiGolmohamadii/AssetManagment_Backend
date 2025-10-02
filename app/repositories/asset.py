@@ -85,6 +85,11 @@ async def search_assets(asset_search: AssetSearch, db_session: AsyncSession):
     return result
 
 async def add_new_version(new_version: AssetVersionNew, asset_id: int, db_session: AsyncSession):
+
+    # asset_in_db = await db_session.execute(select(Asset).where(Asset.id == asset_id))
+    # if not asset_in_db:
+    #     raise AssetNotFound
+
     new_version = AssetVersion(asset_id = asset_id,  **new_version.model_dump())
 
     try:

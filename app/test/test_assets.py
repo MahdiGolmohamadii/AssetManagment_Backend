@@ -15,9 +15,9 @@ ARTUSER ={"username":"art", "password":"art", "roles": "artist", "id":2}
 ASSET1 = {"name":"asset1", "description":"oh describe it","asset_type":"model", "id": 0, "versions":[]}
 ASSET2 = {"name":"asset2", "description":"oh describe it2","asset_type":"texture", "id": 0, "versions":[]}
 
-Ver1 = {"version_number": 1, "file_path": "/somewhere/imp", "status": "Published","id":0,  "asset_id": 0}
-ver2 = {"version_number": 2, "file_path": "/somewhere/imp2", "status": "ReadyForReview","id":0,  "asset_id": 0}
-ver3 = {"version_number": 3, "file_path": "/somewhere/imp3", "status": "Published","id":0,  "asset_id": 0}
+Ver1 = {"version_number": 1, "file_path": "/somewhere/imp", "status": "Published", "id":0, "asset_id": 0}
+ver2 = {"version_number": 2, "file_path": "/somewhere/imp2", "status": "ReadyForReview", "id":0, "asset_id": 0}
+ver3 = {"version_number": 3, "file_path": "/somewhere/imp3", "status": "Published", "id":0, "asset_id": 0}
 
 @pytest_asyncio.fixture
 async def admin_token(async_client):
@@ -93,9 +93,13 @@ async def test_add_version(async_client, admin_token):
     ASSET1['versions'].append(response_data)
 
     #TODO the following is fucked I have no idea why!
-    # payload = AssetVersionNew(version_number=Ver1["version_number"], file_path=Ver1["file_path"], status=Ver1["status"]).model_dump()
-    # response = await async_client.post(f"/assets/{100}", headers = headers, json=payload)
+    # payload = AssetVersionNew(version_number=ver3["version_number"], file_path=ver3["file_path"], status=ver3["status"]).model_dump()
+    # payload = AssetVersionNew(version_number=1, file_path="/as/as/as", status="Published").model_dump()
+    # response = await async_client.post("/assets/100", headers = headers, json=payload)
     # print(response.json())
+
+    # res = await async_client.get(f"/assets/{100}", headers=headers)
+    # assert res.status_code == 404
 
 @pytest.mark.asyncio
 async def test_get_asset(async_client, admin_token):
