@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Body, HTTPException
+from fastapi import APIRouter, Depends, Query, Body, HTTPException
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import utils
-from app.schemas.user import UserInput, UserInDb, UserOut, UserUpdate
+from app.schemas.user import UserInput, UserInDb, UserOut, UserUpdate, UserSearch
 from app.core.database import get_db_session
 from app.core.security import get_current_user, one_or_more_scopes
 from app.repositories import user as userRepo
@@ -54,7 +54,6 @@ async def get_user(
     raise HTTPException(status_code=401, detail="you do not have access to user you wanted")
 
 
-
 @router.delete("/users/{user_id}")
 async def delete_user(
             user_id:int, 
@@ -80,13 +79,12 @@ async def update_user(
     user_in_db = UserInDb.model_validate(user_updated)
     return UserOut(**user_in_db.model_dump())
 
+
 @router.get("/users/")
 async def search_user(
             db_session: Annotated[AsyncSession, Depends(get_db_session)], 
             user: Annotated[UserInDb, Depends(get_current_user)],
-            id: int | None = None, 
-            username: str | None = None, 
-            role: str | None = None):
+            user_search: Annotated[UserSearch, Query()]):
     
-    users = await userRepo.find_user(db_session=db_session, id=id, username=username, role=role)
+    users = await userRepo.find_user(db_session=db_session, user_search=user_search)
     return [UserOut.model_validate(user) for user in users]

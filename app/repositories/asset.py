@@ -11,7 +11,7 @@ from app.schemas.asset import AssetNew, AssetVersionNew, AssetUpdate, AssetVersi
 class AssetNotFound(Exception):
     pass
 
-async def add_new_asset(new_asset: AssetNew, db_session: AsyncSession):
+async def add_new_asset(new_asset: AssetNew, db_session: AsyncSession) -> Asset:
     
     new_asset = Asset(**new_asset.model_dump())
     try:
@@ -25,7 +25,7 @@ async def add_new_asset(new_asset: AssetNew, db_session: AsyncSession):
     
 
 
-async def get_assets(db_session: AsyncSession, asset_id: int | None = None):
+async def get_assets(db_session: AsyncSession, asset_id: int | None = None) -> Asset:
     if not asset_id:
         all_assets = await db_session.execute(select(Asset).options(selectinload(Asset.versions)))
         return all_assets.scalars().all()
@@ -37,7 +37,7 @@ async def get_assets(db_session: AsyncSession, asset_id: int | None = None):
         except IntegrityError:
             raise AssetNotFound
         
-async def update_asset(asset_id: int, asset_update: AssetUpdate, db_session: AsyncSession):
+async def update_asset(asset_id: int, asset_update: AssetUpdate, db_session: AsyncSession) -> Asset:
     asset_to_update = await db_session.execute(select(Asset).options(selectinload(Asset.versions)).where(Asset.id == asset_id))
     asset_to_update = asset_to_update.scalar_one_or_none()
     if asset_to_update is None:
@@ -57,7 +57,7 @@ async def update_asset(asset_id: int, asset_update: AssetUpdate, db_session: Asy
         raise e
     
    
-async def delete_asset(asset_id: int , db_session: AsyncSession):
+async def delete_asset(asset_id: int , db_session: AsyncSession) -> Asset:
     result = await db_session.execute(select(Asset).options(selectinload(Asset.versions)).where(Asset.id==asset_id))
     asset_in_db = result.scalar_one_or_none()
     if asset_in_db is None:
@@ -69,7 +69,7 @@ async def delete_asset(asset_id: int , db_session: AsyncSession):
     return asset_in_db
 
 
-async def search_assets(asset_search: AssetSearch, db_session: AsyncSession):
+async def search_assets(asset_search: AssetSearch, db_session: AsyncSession) list[Asset]:
     query = select(Asset).options(selectinload(Asset.versions))
 
     if asset_search.id:
@@ -84,7 +84,7 @@ async def search_assets(asset_search: AssetSearch, db_session: AsyncSession):
     result = users.scalars().all()
     return result
 
-async def add_new_version(new_version: AssetVersionNew, asset_id: int, db_session: AsyncSession):
+async def add_new_version(new_version: AssetVersionNew, asset_id: int, db_session: AsyncSession) -> AssetVersion:
 
     # asset_in_db = await db_session.execute(select(Asset).where(Asset.id == asset_id))
     # if not asset_in_db:
@@ -104,7 +104,7 @@ async def add_new_version(new_version: AssetVersionNew, asset_id: int, db_sessio
         await db_session.rollback()
         raise e
 
-async def get_asset_verison(asset_id: int, version_id: int, db_session: AsyncSession):
+async def get_asset_verison(asset_id: int, version_id: int, db_session: AsyncSession) -> AssetVersion:
     try:
         result = await db_session.execute(select(AssetVersion).where(AssetVersion.asset_id == asset_id).where(AssetVersion.id == version_id))
         version_in_db = result.scalar_one_or_none()
@@ -115,7 +115,7 @@ async def get_asset_verison(asset_id: int, version_id: int, db_session: AsyncSes
         await db_session.rollback()
         raise e
 
-async def update_asset_version(asset_id: int, version_id: int, version_update: AssetVersionUpdate, db_session: AsyncSession):
+async def update_asset_version(asset_id: int, version_id: int, version_update: AssetVersionUpdate, db_session: AsyncSession) -> AssetVersion:
     version_in_db = await get_asset_verison(asset_id,version_id, db_session)
 
     if version_in_db is None:
@@ -136,7 +136,7 @@ async def update_asset_version(asset_id: int, version_id: int, version_update: A
         await db_session.rollback()
         raise e
     
-async def delete_asset_version(asset_id: int, version_id: int, db_sesssion: AsyncSession):
+async def delete_asset_version(asset_id: int, version_id: int, db_sesssion: AsyncSession) -> AssetVersion:
     version_in_db = await get_asset_verison(asset_id, version_id, db_sesssion)
     if version_in_db is None:
         raise AssetNotFound
@@ -152,7 +152,7 @@ async def delete_asset_version(asset_id: int, version_id: int, db_sesssion: Asyn
         raise e
     
 
-async def search_assets_version(asset_id:int, version_search: AssetVersionSearch, db_session: AsyncSession):
+async def search_assets_version(asset_id:int, version_search: AssetVersionSearch, db_session: AsyncSession) -> list[AssetVersion]:
     query = select(AssetVersion).where(AssetVersion.asset_id == asset_id)
 
     if version_search.id:

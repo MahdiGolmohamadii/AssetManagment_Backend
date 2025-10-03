@@ -52,10 +52,8 @@ async def get_asset_by_id(
         asset = await asset_repo.get_assets(asset_id=asset_id, db_session=db_session)
     except asset_repo.AssetNotFound:
         raise HTTPException(status_code=404, detail="Asset Not Found")
-    
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset Not Found")
-    
     return AssetOut.model_validate(asset)
 
 
@@ -115,7 +113,6 @@ async def get_asset_version(
         raise HTTPException(status_code=404, detail="Asset Not Found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something Went Wrong: {e}")
-    
     if version_in_db is None:
         raise HTTPException(status_code=404, detail="Asset Or Version Not Found!")
     return version_in_db
@@ -150,9 +147,6 @@ async def delete_asset_version(
         raise HTTPException(status_code=404, detail="Asset Not Found")
     except Exception as e:
         raise HTTPException(status_code=500, detail="Something Went Wrong")
-    
-
     if deleted_version is None:
         raise HTTPException(status_code=404, detail="Asset Not Found")
-    
     return AssetVersionOut.model_validate(deleted_version)

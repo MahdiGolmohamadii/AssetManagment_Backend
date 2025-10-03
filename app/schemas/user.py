@@ -10,11 +10,6 @@ class UserInDb(UserInput):
     id: int
     roles: str
 
-    # class Config:
-    #     from_attributes = True
-
-
-
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
@@ -22,10 +17,14 @@ class UserOut(BaseModel):
     username: str
     roles: str
 
-    # class Config:
-    #     from_attributes = True
-
 class UserUpdate(BaseModel):
     username: str | None = None
     roles: str | None = None
+
+class UserSearch(BaseModel):
+    id: int | None = None
+    username: str | None = None
+    roles: str | None =  None
+    offset: int | None = 0
+    limit: int | None = 10
 

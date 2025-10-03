@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
 
 from app.models.user import User
-from app.schemas.user import UserInDb, UserUpdate, UserInput
+from app.schemas.user import UserInDb, UserUpdate, UserInput, UserSearch
 from app.core import security
 
 
@@ -11,7 +11,6 @@ class UsernameAlreadyExists(Exception):
     pass
 
 async def add_new_user(user_input: UserInput, db_session: AsyncSession) -> User:
-    
     hashed_pass = security.hash_plain_password(user_input.password)
     new_user = User(username = user_input.username, password=hashed_pass, roles = "guest")
     try:
@@ -54,7 +53,6 @@ async def delete_user_with_id(id: int, db_session: AsyncSession) -> bool:
     return True
 
 async def update_user(id: int, user_update: UserUpdate, db_session: AsyncSession) -> User:
-
     result = await db_session.execute(select(User).where(User.id == id))
     user_db = result.scalar_one_or_none()
     if not user_db:
@@ -70,21 +68,16 @@ async def update_user(id: int, user_update: UserUpdate, db_session: AsyncSession
 
 async def find_user(
             db_session: AsyncSession, 
-            id: int | None = None, 
-            username: str | None = None, 
-            role: str | None = None, 
-            limit: int = 10, 
-            offset: int = 0) -> list[User]:
-    
+            user_search: UserSearch) -> list[User]:
     query = select(User)
-    if id:
-        query = query.where(User.id == id)
-    if role:
-        query = query.where((User.roles.ilike(f"%{role}%")))
-    if username:
-        query = query.where(User.username == username)
+    if user_search.id:
+        query = query.where(User.id == user_search.id)
+    if user_search.roles:
+        query = query.where((User.roles.ilike(f"%{user_search.roles}%")))
+    if user_search.username:
+        query = query.where(User.username == user_search.username)
 
-    query = query.limit(limit).offset(offset)
+    query = query.limit(user_search.limit).offset(user_search.offset)
     users = await db_session.execute(query)
     res = users.scalars().all()
     return res
