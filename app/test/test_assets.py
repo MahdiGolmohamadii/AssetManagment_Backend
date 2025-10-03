@@ -92,14 +92,6 @@ async def test_add_version(async_client, admin_token):
     ver2["asset_id"] = response_data['asset_id']
     ASSET1['versions'].append(response_data)
 
-    #TODO the following is fucked I have no idea why!
-    # payload = AssetVersionNew(version_number=ver3["version_number"], file_path=ver3["file_path"], status=ver3["status"]).model_dump()
-    # payload = AssetVersionNew(version_number=1, file_path="/as/as/as", status="Published").model_dump()
-    # response = await async_client.post("/assets/100", headers = headers, json=payload)
-    # print(response.json())
-
-    # res = await async_client.get(f"/assets/{100}", headers=headers)
-    # assert res.status_code == 404
 
 @pytest.mark.asyncio
 async def test_get_asset(async_client, admin_token):

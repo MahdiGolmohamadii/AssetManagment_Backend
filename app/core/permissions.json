@@ -11,7 +11,9 @@
     "version:*"
   ],
   "guest": [
-    "user:read"
+    "user:read",
+    "asset:view",
+    "version:new"
   ]
 }
 
